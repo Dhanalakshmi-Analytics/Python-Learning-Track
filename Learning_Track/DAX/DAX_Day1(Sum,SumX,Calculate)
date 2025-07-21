@@ -1,0 +1,302 @@
+What is SUM() in DAX?
+Definition:
+The SUM() function in DAX adds up (aggregates) all the values in a numeric column.
+
+Syntax:
+
+SUM(<column>)
+column: The column containing numeric values you want to total.
+
+🟡 It ignores blank values.
+🔴 It does not accept expressions or row-by-row calculations — for that, use SUMX().
+
+🧠 Simple Example
+Table: Sales
+
+OrderID	Region	SalesAmount
+1001	East	500
+1002	West	300
+1003	East	200
+
+Example:
+Total Sales = SUM(Sales[SalesAmount])
+📊 Result = 500 + 300 + 200 = 1000
+
+🔍 Real-World Use Cases (with Filters, Measures, and Relationships)
+✅ 1. Total Revenue by Category (Used in Visuals)
+
+Total Revenue = SUM(FactSales[Revenue])
+Used in a bar chart with CategoryName from DimProduct — automatically filters using relationships.
+
+✅ 2. Conditional Calculation using CALCULATE() + SUM()
+
+East Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    Sales[Region] = "East"
+)
+📊 Result: Adds only those rows where Region is East.
+
+✅ 3. Filter Using Slicer Selection
+
+Selected Region Sales = SUM(Sales[SalesAmount])
+If you place this in a card visual, and apply a slicer for Region, the measure dynamically updates based on slicer selection.
+
+✅ 4. Sum Over Related Table with Relationship
+Imagine this model:
+
+Customer (CustomerID) ⬌ Sales (CustomerID)
+You can do:
+
+
+Total Sales by Customer = SUM(Sales[SalesAmount])
+Then use Customer[Name] in a visual — it will auto-filter based on relationship.
+
+✅ 5. SUM + Time Intelligence (via Measures)
+
+Sales This Year = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    YEAR(Sales[OrderDate]) = YEAR(TODAY())
+)
+✅ 6. SUM With Virtual Tables (FILTER() Usage)
+
+High Value Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    FILTER(Sales, Sales[SalesAmount] > 1000)
+)
+Filters the table to only those rows where SalesAmount > 1000, then sums them.
+
+⚠️ When NOT to Use SUM()
+If you want to sum an expression or row-by-row formula, use SUMX() instead:
+
+❌ This is invalid:
+
+SUM(Sales[UnitPrice] * Sales[Quantity])  -- ❌ Not allowed
+✅ Use this instead:
+
+SUMX(Sales, Sales[UnitPrice] * Sales[Quantity])
+🔁 Summary Table
+Use Case	Function	Comment
+Total of numeric column	SUM()	Simple and fast
+Sum with filters	CALCULATE + SUM	Use for filtered totals
+Sum with row-wise calculation	🔍 What is SUMX()?
+Definition:
+SUMX() is an iterator function in DAX. It evaluates an expression row by row over a table, then returns the sum of those calculated values.
+
+📘 Syntax:
+dax
+Copy
+Edit
+SUMX(<table>, <expression>)
+table: The table over which to iterate.
+
+expression: The formula to calculate for each row.
+
+🟢 Think of it like an Excel formula that calculates in each row, then totals the result.
+
+🔁 How is SUMX() Different from SUM()?
+Feature	SUM()	SUMX()
+Works on column only	✅ Yes	❌ No (requires expression)
+Works on row-by-row	❌ No	✅ Yes
+Accepts calculated expressions	❌ No	✅ Yes
+Performance	🟢 Fast (for simple sums)	🔴 Slower (row-by-row calc)
+
+✅ Simple Example
+Table: Sales
+OrderID	Quantity	UnitPrice
+1001	2	100
+1002	1	500
+1003	3	200
+
+❌ This won't work:
+dax
+Copy
+Edit
+TotalRevenue = SUM(Sales[Quantity] * Sales[UnitPrice])  -- Error!
+✅ Use SUMX():
+dax
+Copy
+Edit
+TotalRevenue = SUMX(Sales, Sales[Quantity] * Sales[UnitPrice])
+📊 Result = (2×100) + (1×500) + (3×200) = 200 + 500 + 600 = 1300
+
+🔍 Complex Examples
+1️⃣ Sales Amount After Discount
+Assume columns:
+
+UnitPrice
+
+Quantity
+
+DiscountPercent
+
+dax
+Copy
+Edit
+Net Sales = SUMX(Sales, Sales[Quantity] * Sales[UnitPrice] * (1 - Sales[DiscountPercent]))
+Row-wise discounted total.
+
+2️⃣ Calculate Revenue Only for High Sales
+dax
+Copy
+Edit
+High Sales Revenue = SUMX(
+    FILTER(Sales, Sales[Quantity] > 5),
+    Sales[Quantity] * Sales[UnitPrice]
+)
+➡️ Sums only rows where Quantity > 5.
+
+3️⃣ Use in Related Table Context (with Relationship)
+Assume:
+
+Product[ProductID] ←→ Sales[ProductID]
+
+Measure in Product table:
+
+dax
+Copy
+Edit
+Total Revenue by Product = SUMX(
+    RELATEDTABLE(Sales),
+    Sales[Quantity] * Sales[UnitPrice]
+)
+Iterates over all related rows from Sales for each product.
+
+4️⃣ Dynamic Date Filtering
+dax
+Copy
+Edit
+Last 30 Days Sales = SUMX(
+    FILTER(Sales, Sales[OrderDate] >= TODAY() - 30),
+    Sales[Quantity] * Sales[UnitPrice]
+)
+5️⃣ With Virtual Table in Measures
+dax
+Copy
+Edit
+Top Product Sales = SUMX(
+    TOPN(5, Sales, Sales[Quantity] * Sales[UnitPrice], DESC),
+    Sales[Quantity] * Sales[UnitPrice]
+)
+➡️ Sums only top 5 sales based on revenue.
+
+💡 When to Use SUMX()
+Scenario	Use SUMX()?
+Multiplying two columns row-by-row	✅ Yes
+Applying discounts or calculated fields	✅ Yes
+Aggregating simple column totals	❌ No (use SUM)
+Need custom row-level logic	✅ Yes
+
+📌 Summary
+SUM() is for direct column sums
+
+SUMX() is for custom, row-level expressions
+
+SUMX() is slower than SUM() — use only when needed
+
+Used in calculated measures and custom KPI logicSUMX()	Use for expressions/formulas
+Slicer-responsive visuals	SUM()	Dynamic context-aware behavior
+
+
+
+CALCULATE() modifies the filter context of a calculation or measure.
+It takes an expression (like SUM(), AVERAGE(), etc.) and then applies one or more filters to that expression.
+
+✅ Syntax:
+dax
+Copy
+Edit
+CALCULATE(<expression>, <filter1>, <filter2>, ...)
+<expression> → Any DAX measure or expression (like SUM(Sales[SalesAmount]))
+
+<filter> → One or more filter conditions (can be column filters, table filters, or functions like FILTER())
+
+🎯 Why Use CALCULATE()?
+To create custom filters inside a measure.
+
+To override slicers or report filters.
+
+To create time intelligence logic (e.g., YTD, MTD).
+
+To add row-level logic inside a visual.
+
+🧠 Simple Example
+dax
+Copy
+Edit
+East Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    Sales[Region] = "East"
+)
+This sums only the SalesAmount for rows where Region = "East".
+
+🔍 Real-World Use Cases
+✅ 1. Apply Filter Inside a Measure
+dax
+Copy
+Edit
+Large Orders Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    Sales[OrderValue] > 10000
+)
+➡️ Calculates total sales only for large orders.
+
+✅ 2. Combine with Time Functions
+dax
+Copy
+Edit
+Sales Last Year = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    SAMEPERIODLASTYEAR(Date[Date])
+)
+➡️ Returns total sales for the same period last year.
+
+✅ 3. Ignore Filters with ALL()
+dax
+Copy
+Edit
+Total Sales All Regions = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    ALL(Sales[Region])
+)
+➡️ Ignores slicer or visual filters on Region.
+
+✅ 4. Use with FILTER() for Advanced Conditions
+dax
+Copy
+Edit
+High Margin Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    FILTER(Sales, Sales[ProfitMargin] > 0.3)
+)
+➡️ Custom filter logic — filters only rows where margin > 30%.
+
+✅ 5. Multiple Filters
+dax
+Copy
+Edit
+East Product A Sales = CALCULATE(
+    SUM(Sales[SalesAmount]),
+    Sales[Region] = "East",
+    Sales[Product] = "Product A"
+)
+➡️ Filters for a specific region and product.
+
+⚠️ Important Concepts
+Concept	Explanation
+Filter Context	The current filter applied in visuals/slicers.
+CALCULATE modifies it	Adds, replaces, or removes filters.
+Context transition	Converts row context to filter context in calculated columns.
+Works only with expressions	Can’t use as a standalone function.
+
+🆚 CALCULATE() vs FILTER()
+Feature	CALCULATE()	FILTER()
+Main Purpose	Modify filter context	Return filtered table
+Returns	Scalar value (like SUM result)	Table
+Used Inside	Measures	Often inside CALCULATE
+
+📌 Summary Table
+Use Case	Example
+Sum with filter	CALCULATE(SUM(Sales[Amount]), Region = "East")
+Time intelligence	SAMEPERIODLASTYEAR(Date[Date])
+Remove filters	ALL(), REMOVEFILTERS()
+Complex filters	FILTER(Sales, Sales[Profit] > 5000)
